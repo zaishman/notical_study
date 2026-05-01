@@ -9,10 +9,16 @@ body{
     background: #42a6ed; /*make interactively change*/
 }
 
-#chatContainer{
+#chatPage {
+    display: flex;
+    flex-direction: row;
     width: 100%;
-    max-width: 700px;
-    height: 80vh;
+    height: 100%;
+}
+
+#chatContainer{
+    width: 40vw;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     gap:12px;
@@ -46,9 +52,10 @@ body{
 
 
 .assistant {
-  background-color: #070707;
+  background-color: #42a6ed;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
+  color: white;
 }
 
 #replyBox {
@@ -83,4 +90,19 @@ body{
     opacity: 0.85; 
 }
 
+#mindmap {
+    background-color: #D4547A;
+    width: 60vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap:12px;
+    flex: 1;
+}
+
+#mapCanvas {
+  width: 60vw;
+  height: 100vh;
+  display: block;
+}
 
