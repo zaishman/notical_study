@@ -103,6 +103,7 @@ body{
 #mapCanvas {
   width: 60vw;
   height: 100vh;
-  display: block;
+  display: flex;
+  justify-self: center;
 }
 

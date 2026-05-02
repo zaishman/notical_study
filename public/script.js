@@ -9,37 +9,78 @@ or the provided methods, properties and ata to draw, color and
 manipulat 2d graphics on a canvas; jere, for shapes,
 text and images*/
 const scale = window.devicePixelRatio;
+let nodes = [];
 
-window.addEventListener('load', () => {
-canvas.width = canvas.clientWidth * scale; /*returns full layout width in pixels*/
-canvas.height = canvas.clientHeight * scale;
-ctx.scale(scale, scale);
-});
 
-function drawNode(node, x,y) {
-ctx.fillStyle = '#2f6df5';
-ctx.fillRect(x - 80, y - 25, 160, 50);
-ctx.font = '16px Arial';
-ctx.textAlign = 'center';
-ctx.textBaseline = 'middle';
-ctx.fillStyle = 'white';
-ctx.fillText(node.label, x, y);
+function resizeCanvas() {
+  canvas.width = canvas.clientWidth * scale;
+  canvas.height = canvas.clientHeight * scale;
 
-ctx.fillStyle = '#cccccc';
-ctx.font = '11px Arial';
-ctx.fillStyle = 'black'
-ctx.fillText(node.description, x, y +40);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(scale, scale);
 
-node.branches.forEach((branch, index) => {
-const branchY = y + 70 + (index * 30);
-ctx.fillRect(x - 70, branchY - 12, 140, 24);
-ctx.fillStyle = 'red';
-ctx.font = '12px Arial';
-ctx.fillStyle = 'black';
+  nodes.forEach(n => drawNode(n.node, n.x, n.y));
+}
+
+window.addEventListener('load', resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
+
+
+
+//TEXT NODES//
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  words.forEach(word => {
+    const test = current + word + ' ';
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current.trim());
+      current = word + ' ';
+    } else {
+      current = test;
+    }
+  });
+  lines.push(current.trim());
+  return lines;
+}
+
+function drawNode(node, x, y) {
+  const lineHeight = 16;
+  const padding = 16;
+
+  // MAIN LABEL BOX
+  ctx.font = 'bold 14px Arial';
+  const labelW = ctx.measureText(node.label).width + padding * 2;
+  ctx.fillStyle = '#2f6df5';
+  ctx.fillRect(x - labelW/2, y - 20, labelW, 40);
+  ctx.fillStyle = 'white';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-ctx.fillText(branch, x, branchY);
-})
+  ctx.fillText(node.label, x, y);
+
+  // DESCRIPTION
+  ctx.font = '11px Arial';
+  ctx.fillStyle = '#dddddd';
+  const descLines = wrapText(ctx, node.description, 200);
+  descLines.forEach((line, i) => {
+    ctx.fillText(line, x, y + 35 + (i * lineHeight));
+  });
+
+  const descHeight = descLines.length * lineHeight;
+
+  // BRANCHES
+  node.branches.forEach((branch, index) => {
+    const branchY = y + 55 + descHeight + (index * 35);
+    ctx.font = '11px Arial';
+    const branchW = ctx.measureText(branch).width + padding * 2;
+    ctx.fillStyle = '#1a4fc4';
+    ctx.fillRect(x - branchW/2, branchY - 12, branchW, 24);
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(branch, x, branchY);
+  });
 }
 
 /* canvas MUST ALWAYS prioritize/use canvas propeties,
@@ -82,7 +123,7 @@ async function sendButton() {
     if(!text) return;
 
     addMessage('user', text);
-    input.value = ' ';
+    input.value = '';
 
     history.push({role: 'user', content: text});
 
@@ -103,14 +144,18 @@ async function sendButton() {
     addMessage('assistant', data.reply);
     //reccieve and log response here
 
-    console.log('canvas size:', canvas.clientWidth, canvas.clientHeight);
-    console.log('drawing node:', data.node);
+if (data.node) {
+  const centerX = canvas.clientWidth / 2;
+  const spacingX = Math.min(250, canvas.clientWidth * 0.3);
 
-        if(history.length === 2) {
-        drawNode(data.node, canvas.clientWidth/2, canvas.clientHeight/2); //puts in the node input, which is the short big title if the message is 1st
-    }
-    else {
-        drawNode(data.node, canvas.clientWidth/2 + 250, history.length * 80);
+  const x = history.length === 2
+    ? centerX
+    : centerX + spacingX;
+
+  const y = (history.length * 80) % canvas.clientHeight;
+
+  nodes.push({ node: data.node, x, y }); // store for redraw
+  drawNode(data.node, x, y);
 }
 
     history.push({ role: 'assistant', content: data.reply });

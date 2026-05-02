@@ -71,6 +71,11 @@ always return this exact JSON:
 After each branch, try to explore more into it, and branch into a description or bridging the grasp of understanding there, move onto the next branch, and after each has been covered, move onto the next subtopic. 
 
 Never add markdown. Never add anything outside the JSON.
+
+CRITICAL: You must ALWAYS respond in JSON format, no exceptions.
+Even for validation responses like "not quite" or "good job",
+wrap them in the JSON structure. Never respond with plain text.
+
 `;
 /*what we give the API to use before hand*/
 
@@ -111,6 +116,11 @@ const raw = response.content[0].text
   res.json({ reply: parsed.reply, node: parsed.node });
 } catch(e) {
   console.error('JSON parse failed:', e);
+  console.error('Raw', raw);
+    res.json({ 
+    reply: raw, // just send the raw text as reply
+    node: null}); //no node
+
   res.status(500).json({ error: 'Failed to parse response' });
 }
 /*tells json to transfer data and come back with data, to the api,a nd then the response.*/
