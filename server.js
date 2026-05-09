@@ -76,12 +76,23 @@ CRITICAL: You must ALWAYS respond in JSON format, no exceptions.
 Even for validation responses like "not quite" or "good job",
 wrap them in the JSON structure. Never respond with plain text.
 
+MINDMAP RULES:
+- You receive the current mindmap tree with every message.
+- Always return a "parentNodeId" in your JSON- the id of the 
+  node you want to branch from.
+- For the first message, parentNodeId should be null.
+- For follow-up responses, branch from the most relevant 
+  existing node, not always the root.
+- Before teaching, first create a skeleton of the topic with 
+  3-5 main branches. Then zoom into each one. Go into depth about one, and until oyu think the student has grasped the content, move onto the next branch
+- What you say in "reply" must directly correspond to the 
+  node you're creating.
 `;
 /*what we give the API to use before hand*/
 
 app.post("/chat", async (req, res) => {
 
-    const { message, history, userProfile } = req.body;
+    const { message, history, userProfile, mindmapTree, activeNodeId } = req.body;
     
     const systemPrompt = userProfile
     ? `${NOTICAL_SYSTEM_PROMPT}\n\nSTUDENT PROFILE:\n${userProfile}`
@@ -91,6 +102,12 @@ express to respond with a post, then we define the post itself; so it's async
 or a function that stores data and then can be recalled later (for the history
 feature), then tells the AI what to use in their response, which we will define later
 BTW, req, is request and res, is response back*/
+
+    const mapContent = mindmapTree && mindmapTree.length > 0
+  ? `\n\nCURRENT MINDMAP TREE:\n${JSON.stringify(mindmapTree, null, 2)}\n\nACTIVE NODE ID: ${activeNodeId}`
+  : '\n\nMINDMAP: empty, this is the first message.';
+
+const systemPrompt = `${NOTICAL_SYSTEM_PROMPT}${mapContext}`;
 
 const response = await client.messages.create({
     model: "claude-sonnet-4-6",

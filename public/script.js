@@ -1,6 +1,7 @@
 //heyyy!!
 
-
+let nodes = [];
+let nodeIdCounter = 0;
 
 //START OF MIND-MAP ELEMENTS//
 const canvas = document.getElementById('mapCanvas');
@@ -9,7 +10,6 @@ or the provided methods, properties and ata to draw, color and
 manipulat 2d graphics on a canvas; jere, for shapes,
 text and images*/
 const scale = window.devicePixelRatio;
-let nodes = [];
 
 
 function resizeCanvas() {
@@ -19,7 +19,7 @@ function resizeCanvas() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(scale, scale);
 
-  nodes.forEach(n => drawNode(n.node, n.x, n.y));
+  redrawMap();
 }
 
 window.addEventListener('load', resizeCanvas);
@@ -70,6 +70,7 @@ function drawNode(node, x, y) {
   const descHeight = descLines.length * lineHeight;
 
   // BRANCHES
+  if (node.branches && node.branches.length > 0) {
   node.branches.forEach((branch, index) => {
     const branchY = y + 55 + descHeight + (index * 35);
     ctx.font = '11px Arial';
@@ -80,8 +81,52 @@ function drawNode(node, x, y) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(branch, x, branchY);
+  });}
+}
+
+
+function addNode(label, description, parentId) {
+  const parent = nodes.find(n => n.id === parentId); //finding parent number, or what node # it is so we can position it
+  const x= parent ? parent.x + 250 : canvas.clientWidth/2;
+  //the ? is like a concise version of "if..else"; and checks if it's a parent- and if it is, positions it to the center. here, it also centers from the parent to the right if parent does exist, and it it doesn't, centers it horizontally.
+  const y = parent ? parent.y + (nodes.filter(n => n.parentId === parentId).length*80) : canvas.clientHeight/2;
+  // here, it first checks whether or not the parent actually exists- and then checks if it's a simple node. If it is, then it positions it below the main node- if it's not, and is the parent, then it centers it. 
+  const node = {
+    id: nodeIdCounter++,
+    label,
+    description,
+    parentId,
+    x,
+    y
+  };
+  //makes the node itself
+
+  nodes.push(node); 
+  return node;
+}
+
+function redrawMap() {
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  //clears everything
+
+  nodes.forEach(node => {
+    if(node.parentId!== null) { //if parent id 0, 
+      const parent = nodes.find(n => n.id === node.parentId);
+      ctx.strokeStyle = '#666666';
+      ctx.lineWidth = 1.5
+      ctx.beginPath();
+      ctx.moveTo(parent.x, parent.y); //go to positions set above
+      ctx.lineTo(node.x, node.y);
+      ctx.stroke();
+    }
+  });
+
+  nodes.forEach(node => {
+    drawNode(node, node.x, node.y);
   });
 }
+
+
 
 /* canvas MUST ALWAYS prioritize/use canvas propeties,
 which are usually in fillRect, circle, etc. etc. so it's a bti
@@ -133,29 +178,38 @@ async function sendButton() {
         body: JSON.stringify({
             message: text,
             history: history.slice(0, -1),
-            userProfile 
+            userProfile,
+
+            mindmapTree: nodes.map(n=> ({
+              id: n.id,
+              label: n.label,
+              parentId: n.parentId
+            })),
+            activeNodeId: nodes.length > 0 ? nodes[nodes.length-1].id : null
         })
         })
-        /* fetches the chat responses, the posts, takes the content
-        and sends iit to .json, reads, and then indicates what data it's transfering
-        and responding back with from the history+ user profile.*/
+    /* fetches the chat responses, the posts, takes the content
+    and sends iit to .json, reads, and then indicates what data it's transfering
+    and responding back with from the history+ user profile.*/
     const data = await response.json();
     console.log(data);
     addMessage('assistant', data.reply);
     //reccieve and log response here
 
 if (data.node) {
-  const centerX = canvas.clientWidth / 2;
-  const spacingX = Math.min(250, canvas.clientWidth * 0.3);
+  const parentId = data.parentNodeId ?? null;
+  addNode(data.node.label, data.node.description, parentId);
+// determines id # of the node, and if it's a root or not. Then creates the nodes
 
-  const x = history.length === 2
-    ? centerX
-    : centerX + spacingX;
+  if (data.node.branches) {
+    const parentNode = nodes[nodes.length -1];
+    data.node.branches.forEach(branch => {
+      addNode(branch, ' ', parentNode.id);
+    });
+  }
+  //here, identifies the nodes in which form they were added, in branches, and then essentially sorts them. The add node for the branch, it creates a label, empty pace for the description and it's id.
 
-  const y = (history.length * 80) % canvas.clientHeight;
-
-  nodes.push({ node: data.node, x, y }); // store for redraw
-  drawNode(data.node, x, y);
+  redrawMap();
 }
 
     history.push({ role: 'assistant', content: data.reply });
