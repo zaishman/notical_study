@@ -45,7 +45,72 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-function drawNode(node, x, y) {
+
+
+
+
+//NODES//
+
+    function drawQuestionNode( node, x, y) {
+      const padding = 16;
+      ctx.font = '13px Arial';
+      const labelW = Math.max(ctx.measureText(node.label).width + padding *2, 200);
+
+
+      ctx.fillStyle = '#69e3ff';
+      ctx.fillRect(x-labelW/2, y- 20, labelW, 40);
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.label, x, y);
+
+
+      if(node.interactionType === 'multipleChoice' && node.options?.length > 0) {
+        node.options.forEach((option, i) => {
+          const optY = y + 45 + (i*35);
+          const optW = ctx.measureText(option).width + padding *2;
+
+          ctx.fillStyle = '#69e3ff';
+          ctx.fillRect(x - optW/2, optY - 12, optW, 24);
+          ctx.fillStyle = 'white';
+          ctx.font = '11px Arial';
+          ctx.fillText(option, x, optY);
+  })}
+
+    if(node.interactiontype === 'freeText') {
+      ctx.fillStyle = '#69e3ff';
+      ctx.fillRect(x-labelW/2, y- 20, labelW, 40);
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.label, x, y);
+      }
+}
+
+
+    function drawKnowledgeNode( node, x, y) {
+      const padding = 16; 
+      ctx.font = '13px Arial';
+      const labelW = Math.max(ctx.measureText(node.label).width + padding * 2, 200);
+
+      ctx.fillStyle = '#ffa569';
+      ctx.fillRect(x - labelW/2, y - 20, labelW, 40);
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(node.label, x, y);
+
+    if (node.description) {
+    ctx.font = '11px Arial';
+    ctx.fillStyle = '#dddddd';
+    const descLines = wrapText(ctx, node.description, 200);
+    descLines.forEach((line, i) => {
+      ctx.fillText(line, x, y + 35 + (i * 16));
+    });
+  }
+    }
+
+function drawNode(node, x, y) { //(node, x,y) are parameters in which placehold the content/features below.
   const lineHeight = 16;
   const padding = 16;
 
@@ -82,15 +147,45 @@ function drawNode(node, x, y) {
     ctx.textBaseline = 'middle';
     ctx.fillText(branch, x, branchY);
   });}
+
+  if(node.type === 'question') drawQuestionNode(node, x, y);
+  else drawKnowledgeNode(node,  x, y);
+}
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  nodes.forEach(node => {
+    const hit = clickX > node.x - 80 && clickX < node.x + 80
+    && clickY > node.y - 20 && clickY < node.y + 20;
+
+    if (hit) handleNodeClick(node);
+  });
+});
+
+function handleNodeClick(node) {
+  console.log('clicked node:', node.label, 'type:', node.type);
 }
 
 
 function addNode(label, description, parentId) {
-  const parent = nodes.find(n => n.id === parentId); //finding parent number, or what node # it is so we can position it
-  const x= parent ? parent.x + 250 : canvas.clientWidth/2;
-  //the ? is like a concise version of "if..else"; and checks if it's a parent- and if it is, positions it to the center. here, it also centers from the parent to the right if parent does exist, and it it doesn't, centers it horizontally.
-  const y = parent ? parent.y + (nodes.filter(n => n.parentId === parentId).length*80) : canvas.clientHeight/2;
-  // here, it first checks whether or not the parent actually exists- and then checks if it's a simple node. If it is, then it positions it below the main node- if it's not, and is the parent, then it centers it. 
+  const parent = nodes.find(n => n.id === parentId); //Finds the specific parent node in the nodes array to establish the anchor point.
+  const siblings = nodes.filter(n => n.parentId === parentId); // finds nodes witht he name parent (so we can distribute them)
+  const angle = (siblings.length *60) - 60; //distributing space between two siblings
+
+  //math
+  const distance = 250;
+  const rad= (angle *Math. PI) /180;
+
+  const x = parent 
+    ? parent.x + Math.cos(rad) * distance 
+    : canvas.clientWidth / 2;
+  const y = parent 
+    ? parent.y + Math.sin(rad) * distance 
+    : canvas.clientHeight / 2;
+
   const node = {
     id: nodeIdCounter++,
     label,
@@ -100,7 +195,6 @@ function addNode(label, description, parentId) {
     y
   };
   //makes the node itself
-
   nodes.push(node); 
   return node;
 }
@@ -199,6 +293,7 @@ async function sendButton() {
 if (data.node) {
   const parentId = data.parentNodeId ?? null;
   addNode(data.node.label, data.node.description, parentId);
+  console.log(data.parentNodeId)
 // determines id # of the node, and if it's a root or not. Then creates the nodes
 
   if (data.node.branches) {

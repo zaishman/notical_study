@@ -61,10 +61,15 @@ RESPONSE FORMAT:
 always return this exact JSON:
 {
   "reply": "your conversational response",
+  "parentNodeId": number or null,
   "node": {
+    "type": "knowledge" or "question",
     "label": "2-3 word title",
     "description": "one sentence summary",
-    "branches": ["sub-item 1", "sub-item 2"]
+    "branches": ["sub-item 1", "sub-item 2"],
+    "interactionType" : "multipleChoice" or "freeText" or "drawing",
+    "options": [],
+    "correctAnswer": ""
   }
 }
 
@@ -87,16 +92,47 @@ MINDMAP RULES:
   3-5 main branches. Then zoom into each one. Go into depth about one, and until oyu think the student has grasped the content, move onto the next branch
 - What you say in "reply" must directly correspond to the 
   node you're creating.
+  - Branches are OPTIONAL. Only include them when a concept 
+  genuinely has sub-components.
+- A definition node needs no branches — just a label and description.
+- A question node should have NO branches — leave description 
+  empty and wait for the student's answer.
+- Only create a skeleton with branches on the VERY FIRST response.
+- After the skeleton, zoom into ONE branch at a time.
+- "branches" can be an empty array [] when not needed.
+
+NODE TYPES:
+- "knowledge": a fact, definition or explanation. Has description, 
+   branches optional.
+- "question": an interactive prompt. Has label (the question), 
+   interactionType ("multipleChoice" or "freeText" or "drawing"),
+   options (array, only for multipleChoice), correctAnswer (string),
+   empty description.
+
+Always alternate: knowledge node → question node → knowledge → question.
+Never ask two questions in a row.
+
+FIRST MESSAGE RULE — CRITICAL:
+Your very first response MUST always:
+1. Create a root "knowledge" node with the topic as label and 
+   a brief description. parentNodeId must be null.
+2. Include 3-5 branches as the main subtopics.
+3. THEN ask one question in the "reply" text.
+Do NOT create a question node on the first response.
+The first node is ALWAYS type "knowledge" with branches.
+Only create question nodes from the second response onward.
+4. If you want to include a question, have a root knowledge node with the details as above, and THEN make a new question node witht he question.
 `;
 /*what we give the API to use before hand*/
 
 app.post("/chat", async (req, res) => {
 
     const { message, history, userProfile, mindmapTree, activeNodeId } = req.body;
-    
+    /*
     const systemPrompt = userProfile
     ? `${NOTICAL_SYSTEM_PROMPT}\n\nSTUDENT PROFILE:\n${userProfile}`
-: NOTICAL_SYSTEM_PROMPT;
+: NOTICAL_SYSTEM_PROMPT;*/
+
 /*here, we talk about the actual CHAT itself, so we allow the 
 express to respond with a post, then we define the post itself; so it's async
 or a function that stores data and then can be recalled later (for the history
@@ -107,7 +143,7 @@ BTW, req, is request and res, is response back*/
   ? `\n\nCURRENT MINDMAP TREE:\n${JSON.stringify(mindmapTree, null, 2)}\n\nACTIVE NODE ID: ${activeNodeId}`
   : '\n\nMINDMAP: empty, this is the first message.';
 
-const systemPrompt = `${NOTICAL_SYSTEM_PROMPT}${mapContext}`;
+const systemPrompt = `${NOTICAL_SYSTEM_PROMPT}${mapContent}`;
 
 const response = await client.messages.create({
     model: "claude-sonnet-4-6",
@@ -130,7 +166,7 @@ const raw = response.content[0].text
   .trim();
   try{
   const parsed = JSON.parse(raw);
-  res.json({ reply: parsed.reply, node: parsed.node });
+  res.json({ reply: parsed.reply, node: parsed.node, parentNodeId: parsed.parentNodeId });
 } catch(e) {
   console.error('JSON parse failed:', e);
   console.error('Raw', raw);
