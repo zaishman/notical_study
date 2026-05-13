@@ -1,5 +1,7 @@
 //heyyy!!
 
+let activeQuestionNode = null;
+
 let nodes = [];
 let nodeIdCounter = 0;
 
@@ -165,12 +167,62 @@ canvas.addEventListener('click', (e) => {
   });
 });
 
+function submitNodeAnswer(answer, node) {
+  document.getElementById('nodeOverlay').style.display = 'none';
+
+  //sends message exactly 
+  const input = document.getElementById('userInput');
+  input.value = answer;
+  sendButton();
+}
+  //Hooks sub button for text input too
+  document.getElementById('overlaySubmit').addEventListener('click', () => {
+  const answer = document.getElementById('overlayInput').value.trim();
+  if (!answer) return;
+
+  submitNodeAnswer(answer, activeQuestionNode);
+
+  });
+
+
 function handleNodeClick(node) {
   console.log('clicked node:', node.label, 'type:', node.type);
+  if (node.type !== 'question') return;
+  //in this funciton, when the node is clicked, then we check if the node is  a question- yes, then...
+  //calling the cool stuff...
+  const overlay = document.getElementById('nodeOverlay');
+  const question = document.getElementById('overlayQuestion');
+  const optionsDiv= document.getElementById('overlayOptions');
+  const textInput = document.getElementById('overlayInput');
+  activeQuestionNode = node;
+
+  //posiion towards the node
+  const rect = canvas.getBoundingClientRect();
+  overlay.style.left = (rect.left + node.x + 90) + 'px';
+  overlay.style.top = (rect.top + node.y - 20) + 'px';
+
+  question.textContent = node.label;
+  optionsDiv.innerHTML = ' ';
+  textInput.style.display = 'none';
+
+  if(node.interactionType === 'multipleChoice' && node.options?.length > 0) {
+    node.options.forEach(option => {
+      const overlaySend= document.createElement('button');
+      overlaySend.textContent = option;
+      overlaySend.style.cssText = "display: block; width:100%; margin:4px 0; padding:8px; background:#2a2a2a; color:white; border-radius:8px; cursor:pointer; text-align:left;";
+      overlaySend.addEventListener('click', () => submitNodeAnswer(option, node));
+      optionsDiv.appendChild(overlaySend);
+    });
+  } else {
+    textInput.style.display = 'block';
+    textInput.value = ' ';
+    textInput.focus();
+  }
+  overlay.style.display= 'block';
 }
 
 
-function addNode(label, description, parentId) {
+function addNode(label, description, type, parentId) {
   const parent = nodes.find(n => n.id === parentId); //Finds the specific parent node in the nodes array to establish the anchor point.
   const siblings = nodes.filter(n => n.parentId === parentId); // finds nodes witht he name parent (so we can distribute them)
   const angle = (siblings.length *60) - 60; //distributing space between two siblings
@@ -190,6 +242,7 @@ function addNode(label, description, parentId) {
     id: nodeIdCounter++,
     label,
     description,
+    type,
     parentId,
     x,
     y
@@ -292,14 +345,14 @@ async function sendButton() {
 
 if (data.node) {
   const parentId = data.parentNodeId ?? null;
-  addNode(data.node.label, data.node.description, parentId);
+  addNode(data.node.label, data.node.description, data.node.type, parentId);
   console.log(data.parentNodeId)
 // determines id # of the node, and if it's a root or not. Then creates the nodes
 
   if (data.node.branches) {
     const parentNode = nodes[nodes.length -1];
     data.node.branches.forEach(branch => {
-      addNode(branch, ' ', parentNode.id);
+      addNode(branch, ' ', 'knowledge', parentNode.id);
     });
   }
   //here, identifies the nodes in which form they were added, in branches, and then essentially sorts them. The add node for the branch, it creates a label, empty pace for the description and it's id.

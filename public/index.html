@@ -20,7 +20,17 @@
             </div>
         </div>
         <div id="mindmap">
-        <canvas id="mapCanvas"></canvas>
+        <canvas id="mapCanvas">
+            <div id="nodeOverlay" style="display: none; position: absolute; background: #1e1e1e; border-radius: 12px; padding: 16px; min-width: 250px;">
+                <p id="overlayQuestion" style="color:aliceblue; margin-bottom: 12px; font-size: 13px;"></p>
+
+                <div id="overlayOptions"></div>
+
+                <input id="overlayInput" type="text" placeholder="Type here..." style="display:none; width: 100%; background: #2a2a2a; border-radius: 8px; padding: 16px; color:aliceblue; font-size: 12px;"/>
+
+                <button id="overlaySubmit" style="margin-top: 10px; background: #2f6df5; color: white; padding: 8px 16px; border-radius: 8px; cursor: pointer;">Submit</button>"
+            </div>"
+        </canvas>
         </div>
         </div>
 

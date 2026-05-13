@@ -122,6 +122,69 @@ Do NOT create a question node on the first response.
 The first node is ALWAYS type "knowledge" with branches.
 Only create question nodes from the second response onward.
 4. If you want to include a question, have a root knowledge node with the details as above, and THEN make a new question node witht he question.
+
+STRICT NODE FLOW — follow this exact sequence every time:
+1. Knowledge node (label + description, no question)
+2. Question node (tests understanding of that knowledge)
+3. Wait for student answer
+4. Knowledge node (correct answer/explanation as description)
+5. Repeat
+
+DESCRIPTION RULES:
+- Almost every knowledge node will have a description. 
+- Descriptions are 1-2 sentences max — crisp, informative.
+- Branch nodes created in the skeleton also need descriptions
+  when you zoom into them — fill them in as you teach each one.
+- Never leave description empty on a knowledge node.
+-As you introduce a new label, or idea, add a small description
+UNLESS... THE ONLY EXPECTION: 
+-If you have a question node, where you ask the user to define, or answer something that co-relates to a description
+for the thing you're teaching, ONLY THEN, you must not fill in the node for them, and only create it
+AFTER they've told you their answer. 
+
+OF COURSE... most of the time, even if the user is simply answering a question- then 
+put in a small description after their answer ALWAYS. EVERY NODE SHOULD HAVE A DESCRIPTION- UNLESS
+IF YOURE ASKING FIRST AND THEN FILLING IN A DESCRIPTION
+
+-Avoid repeating questions too. 
+
+FLOW RULES:
+- Never create two knowledge nodes in a row without a question.
+- Never create two question nodes in a row.
+- The question must directly test the knowledge node before it.
+
+
+QUESTION NODE ENFORCEMENT:
+- After most knowledge nodes, your next response should be a 
+  question node. No exceptions.
+- If you catch yourself about to send two knowledge nodes in 
+  a row, stop and send a question node instead. Make sure it's relevant, however
+- The question node tests specifically what the last knowledge 
+  node taught- or anticipate a new topic, or bridge. 
+
+When you ask a question, you MUST create a "question" type node.
+NEVER put a question only in the "reply" field.
+If your reply ends with a question, that question MUST also 
+be a separate "question" node in the JSON.
+
+The reply text introduces the question conversationally.
+The node captures it structurally for the mind-map.
+
+Example of CORRECT behavior:
+{
+  "reply": "Here's something to think about — which estate do 
+             you think paid the most taxes?",
+  "parentNodeId": 2,
+  "node": {
+    "type": "question",
+    "label": "Which estate paid the most taxes?",
+    "interactionType": "multipleChoice",
+    "options": ["First Estate", "Second Estate", "Third Estate"],
+    "correctAnswer": "Third Estate",
+    "description": "",
+    "branches": []
+  }
+}
 `;
 /*what we give the API to use before hand*/
 
@@ -164,15 +227,20 @@ const raw = response.content[0].text
   .replace(/```json/g, '')
   .replace(/```/g, '')
   .trim();
-  try{
-  const parsed = JSON.parse(raw);
-  res.json({ reply: parsed.reply, node: parsed.node, parentNodeId: parsed.parentNodeId });
-} catch(e) {
+
+  const jsonStart = raw.indexOf('{');
+  const jsonString = jsonStart !== -1 ? raw.slice(jsonStart) :raw;
+
+  try {
+    const parsed = JSON.parse(jsonString);
+    res.json({reply: parsed.reply, node: parsed.node, parentNodeId: parsed.parentNodeId })
+  } catch(e) {
   console.error('JSON parse failed:', e);
   console.error('Raw', raw);
     res.json({ 
     reply: raw, // just send the raw text as reply
-    node: null}); //no node
+    node: null, //no node
+    parentNodeId: null}); 
 
   res.status(500).json({ error: 'Failed to parse response' });
 }
